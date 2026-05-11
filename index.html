@@ -45,7 +45,7 @@
     #info { display: none; }
     /* minimap moves to top-left so it doesn't collide with swing button */
     #minimap {
-      width: 80px; height: 80px;
+      width: 60px; height: 60px;
       top: 8px; left: 8px;
       bottom: auto; right: auto;
     }
@@ -53,8 +53,8 @@
       top: 8px; right: 10px; font-size: 13px; padding: 6px 10px;
     }
     #muteBtn {
-      top: 8px; right: auto; left: 96px;
-      width: 32px; height: 32px; font-size: 14px;
+      top: 8px; right: auto; left: 76px;
+      width: 30px; height: 30px; font-size: 14px;
     }
     #start .title { font-size: 38px; }
     #start { font-size: 18px; padding: 0 20px; }
@@ -699,6 +699,10 @@ const batRest = new THREE.Vector3(0.35, -0.4, -0.55);
 const batRestRot = new THREE.Euler(-0.4, 0.3, 0.6);
 batGroup.position.copy(batRest);
 batGroup.rotation.copy(batRestRot);
+// scale the bat smaller on mobile so it doesn't dominate the screen
+if (('ontouchstart' in window) || (navigator.maxTouchPoints > 0)) {
+  batGroup.scale.setScalar(0.6);
+}
 camera.add(batGroup);
 scene.add(camera);
 
@@ -1233,25 +1237,42 @@ function drawMinimap() {
     ctx.fill();
   }
 
-  // player as a blue triangle pointing in the look direction
+  // player marker: vision cone + position dot for unmistakable orientation
   const pp = worldToMap(player.pos.x, player.pos.z);
   const dir = new THREE.Vector3();
   camera.getWorldDirection(dir);
   const angle = Math.atan2(dir.x, dir.z) + Math.PI;
+
   ctx.save();
   ctx.translate(pp.mx, pp.mz);
   ctx.rotate(angle);
-  // path the triangle once, then stroke white + fill blue for contrast on yellow bg
+
+  // --- vision cone (translucent blue wedge pointing forward) ---
+  // scale cone with minimap size so it looks right on both desktop and mobile
+  const coneLen = minimapCanvas.width * 0.18;
+  const coneHalfAngle = Math.PI / 4; // 45° to each side = 90° fov
   ctx.beginPath();
-  ctx.moveTo(0, -9);
-  ctx.lineTo(7, 6);
-  ctx.lineTo(-7, 6);
+  ctx.moveTo(0, 0);
+  // forward is -y in canvas coords after our rotation
+  ctx.arc(0, 0, coneLen, -Math.PI/2 - coneHalfAngle, -Math.PI/2 + coneHalfAngle);
   ctx.closePath();
-  ctx.lineWidth = 2;
-  ctx.strokeStyle = '#fff';
+  ctx.fillStyle = 'rgba(30, 127, 255, 0.35)';
+  ctx.fill();
+  ctx.lineWidth = 1.5;
+  ctx.strokeStyle = 'rgba(30, 127, 255, 0.9)';
   ctx.stroke();
+
+  // --- position dot (blue circle with white ring) ---
+  const dotR = Math.max(4, minimapCanvas.width * 0.035);
+  ctx.beginPath();
+  ctx.arc(0, 0, dotR + 1.5, 0, Math.PI * 2);
+  ctx.fillStyle = '#fff';
+  ctx.fill();
+  ctx.beginPath();
+  ctx.arc(0, 0, dotR, 0, Math.PI * 2);
   ctx.fillStyle = '#1e7fff';
   ctx.fill();
+
   ctx.restore();
 }
 
